@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notation Badminton – EPS</title>
+<style>
+  :root{
+    --bg:#f5f4f0; --card:#ffffff; --ink:#1d1d1b; --mute:#6b6a66; --line:#d9d6cf; --line-strong:#9c988f;
+    --accent:#1f5fa8; --accent-soft:#e7f1fb;
+    --n1:#f4c4bd; --n2:#f7dcaa; --n3:#cbe6c1; --n4:#b9d5f2;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{background:var(--card);border-bottom:1px solid var(--line);padding:12px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;position:sticky;top:0;z-index:5}
+  header h1{font-size:17px;margin:0 16px 0 0}
+  .group{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .sep{width:1px;height:26px;background:var(--line)}
+  button,select,input[type=number],input[type=text]{font:inherit;border:1px solid var(--line-strong);border-radius:6px;background:#fff;padding:5px 10px;color:var(--ink)}
+  button{cursor:pointer}
+  button:hover{background:#f0efea}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.primary:hover{background:#184d8a}
+  button.danger{color:#a12b1f}
+  button.small{padding:2px 7px;font-size:12px}
+  main{padding:16px 20px;display:grid;grid-template-columns:1fr 290px;gap:16px;align-items:start}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+  .card h2{font-size:14px;margin:0 0 10px}
+  .hint{color:var(--mute);font-size:12.5px}
+  .gridwrap{overflow:auto;max-height:calc(100vh - 150px);border:1px solid var(--line-strong);border-radius:8px;background:#fff}
+  table.grid{border-collapse:collapse;width:100%;min-width:900px}
+  .grid th,.grid td{border:1px solid var(--line-strong);padding:4px 6px;text-align:center}
+  .grid thead th{background:var(--accent-soft);position:sticky;top:0;z-index:2;font-weight:600;vertical-align:bottom}
+  .grid thead th .afc{display:block;font-size:11px;color:var(--accent);font-weight:700}
+  .grid thead th .lab{display:block;font-size:12px;line-height:1.2}
+  .grid thead th .w{display:block;font-size:11px;color:var(--mute);font-weight:400;margin:2px 0}
+  .grid td.name{text-align:left;white-space:nowrap}
+  .grid tbody tr:nth-child(even) td{background:#faf9f6}
+  .grid td.cell{width:58px;height:34px;font-size:17px;font-weight:700;cursor:pointer;outline:none;user-select:none}
+  .grid td.cell.v1{background:var(--n1)!important}
+  .grid td.cell.v2{background:var(--n2)!important}
+  .grid td.cell.v3{background:var(--n3)!important}
+  .grid td.cell.v4{background:var(--n4)!important}
+  .grid td.cell:focus{box-shadow:inset 0 0 0 3px var(--accent)}
+  .grid tr.disp td{color:#aaa}
+  .grid tr.disp td.cell{background:repeating-linear-gradient(45deg,#f3f2ee,#f3f2ee 4px,#fff 4px,#fff 8px)!important}
+  .grid td.note{font-weight:700;font-size:15px;min-width:70px}
+  .grid td.note.partial{color:var(--mute);font-weight:400}
+  .grid tfoot td{background:#f0efea;font-weight:600;position:sticky;bottom:0}
+  .del{border:none;background:none;color:#b0aca3;cursor:pointer;padding:0 4px;font-size:15px}
+  .del:hover{color:#a12b1f;background:none}
+  .stat{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed var(--line)}
+  .stat b{font-size:15px}
+  .weights label{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:3px 0;font-size:13px}
+  .weights input{width:62px}
+  .legend{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .legend span{padding:2px 8px;border-radius:4px;font-size:12px;border:1px solid var(--line-strong)}
+  .keys kbd{border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:4px;padding:0 5px;font-size:12px;background:#fff}
+  .empty{text-align:center;padding:50px 20px}
+  .empty pre{display:inline-block;text-align:left;background:#f0efea;padding:10px 14px;border-radius:6px}
+  dialog{border:1px solid var(--line-strong);border-radius:12px;padding:20px;width:min(640px,92vw)}
+  dialog::backdrop{background:rgba(0,0,0,.35)}
+  dialog textarea{width:100%;height:220px;font:13px/1.4 ui-monospace,Consolas,monospace;border:1px solid var(--line-strong);border-radius:6px;padding:8px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0}
+  .right{margin-left:auto}
+  #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d1d1b;color:#fff;padding:8px 16px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none}
+  #toast.on{opacity:1}
+  @media (max-width:1000px){main{grid-template-columns:1fr}}
+  @media print{
+    header,.side,.noprint,.del,.colfill{display:none!important}
+    main{display:block;padding:0}
+    .gridwrap{max-height:none;overflow:visible;border:none}
+    #printTitle{display:block!important}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🏸 Notation Badminton</h1>
+  <div class="group">
+    <button class="primary" id="btnImport">Importer une classe</button>
+  </div>
+  <div class="sep"></div>
+  <div class="group">
+    <label>Classe :</label>
+    <select id="selClass"></select>
+    <select id="selLevel" title="Niveau de la grille">
+      <option value="4">Grille 4ème (8 critères)</option>
+      <option value="3">Grille 3ème (9 critères)</option>
+    </select>
+  </div>
+  <div class="sep"></div>
+  <div class="group">
+    <label>Après une saisie :</label>
+    <select id="selDir">
+      <option value="right">→ critère suivant (par élève)</option>
+      <option value="down">↓ élève suivant (par critère)</option>
+    </select>
+  </div>
+  <div class="sep"></div>
+  <div class="group">
+    <button id="btnFill3" title="Met 3 dans toutes les cases vides de la classe">Cases vides → 3</button>
+    <button id="btnAddStudent">+ Élève</button>
+  </div>
+  <div class="group right">
+    <button id="btnCSV">Exporter (Excel)</button>
+    <button id="btnPrint">Imprimer</button>
+  </div>
+</header>
+
+<main>
+  <section>
+    <h2 id="printTitle" style="display:none"></h2>
+    <div id="gridArea"></div>
+  </section>
+
+  <aside class="side">
+    <div class="card">
+      <h2>Statistiques</h2>
+      <div id="stats" class="hint">Aucune classe.</div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h2>Pondération des critères</h2>
+      <div class="hint" style="margin-bottom:8px">Note /20 = moyenne pondérée des niveaux × 5 (niveau 1 = 5/20, niveau 4 = 20/20).</div>
+      <div id="weights" class="weights"></div>
+      <div class="hint" id="motorShare" style="margin-top:6px"></div>
+      <div class="row">
+        <label class="hint">Arrondi :</label>
+        <select id="selRound">
+          <option value="0.1">au dixième</option>
+          <option value="0.25">au quart de point</option>
+          <option value="0.5">au demi-point</option>
+          <option value="1">au point</option>
+        </select>
+      </div>
+      <button id="btnResetW" class="small">Poids par défaut</button>
+    </div>
+
+    <div class="card keys" style="margin-top:14px">
+      <h2>Saisie rapide au clavier</h2>
+      <div class="hint">
+        Cliquez sur la première case, puis tapez <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> (pavé numérique ou rangée du haut, même sans Maj) : la case suivante est sélectionnée toute seule.<br>
+        <kbd>Suppr</kbd> / <kbd>0</kbd> efface · flèches pour se déplacer · <kbd>Entrée</kbd> descend.<br>
+        Astuce : « Cases vides → 3 », puis corrigez seulement les élèves au-dessus ou en dessous.
+      </div>
+      <div class="legend">
+        <span style="background:var(--n1)">1 insuffisant</span>
+        <span style="background:var(--n2)">2 fragile</span>
+        <span style="background:var(--n3)">3 satisfaisant</span>
+        <span style="background:var(--n4)">4 très bon</span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h2>Sauvegarde</h2>
+      <div class="hint" style="margin-bottom:8px">Les notes sont enregistrées automatiquement dans ce navigateur. Faites une copie de sécurité de temps en temps.</div>
+      <div class="row">
+        <button id="btnSave" class="small">Télécharger une sauvegarde</button>
+        <button id="btnLoad" class="small">Restaurer…</button>
+        <input type="file" id="fileLoad" accept=".json" hidden>
+      </div>
+      <div class="row">
+        <button id="btnCSVAll" class="small">Exporter toutes les classes</button>
+        <button id="btnDelClass" class="small danger">Supprimer cette classe</button>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<dialog id="dlgImport">
+  <h2 style="margin-top:0">Importer des élèves</h2>
+  <p class="hint" style="margin-top:0">Copiez les colonnes depuis Excel ou Pronote et collez-les ci-dessous, ou choisissez un fichier .csv. Colonnes attendues : <b>NOM / PRÉNOM / CLASSE / SEXE</b> (avec ou sans ligne d'en-tête). Plusieurs classes peuvent être importées d'un coup.</p>
+  <textarea id="importText" placeholder="NOM	PRENOM	CLASSE	SEXE
+DUPONT	Léa	4A	F
+MARTIN	Hugo	4A	G"></textarea>
+  <div class="row">
+    <input type="file" id="importFile" accept=".csv,.txt">
+    <label class="hint right">Classe si absente : <input type="text" id="importDefClass" size="6" placeholder="ex. 4B"></label>
+  </div>
+  <div class="hint" id="importPreview"></div>
+  <div class="row">
+    <button id="btnDemo" class="small">Charger une classe d'exemple</button>
+    <span class="right"></span>
+    <button id="btnImportCancel">Annuler</button>
+    <button class="primary" id="btnImportOk">Importer</button>
+  </div>
+</dialog>
+
+<div id="toast"></div>
+
+<script>
+(() => {
+  // ---------- Référentiel (fiches d'évaluation CA4 – cycle 4) ----------
+  const CRITS = {
+    '4': [
+      {id:'serv',  afc:'AFC 1', label:'Servir'},
+      {id:'depl',  afc:'AFC 1', label:"Déplacer l'adversaire"},
+      {id:'concl', afc:'AFC 1', label:'Conclure le point'},
+      {id:'eng',   afc:'AFC 2', label:"Se déplacer, gérer l'effort"},
+      {id:'resp',  afc:'AFC 3', label:'Respect et solidarité'},
+      {id:'arb',   afc:'AFC 4', label:'Arbitrer'},
+      {id:'obs',   afc:'AFC 4', label:'Observer / coacher'},
+      {id:'res',   afc:'AFC 5', label:'Accepter, analyser le résultat'}
+    ],
+    '3': [
+      {id:'serv',  afc:'AFC 1', label:'Servir'},
+      {id:'depl',  afc:'AFC 1', label:'Construire le point'},
+      {id:'concl', afc:'AFC 1', label:'Conclure le point'},
+      {id:'def',   afc:'AFC 1', label:'Défendre'},
+      {id:'eng',   afc:'AFC 2', label:'Gérer effort et stratégie'},
+      {id:'resp',  afc:'AFC 3', label:'Respect et solidarité'},
+      {id:'arb',   afc:'AFC 4', label:'Arbitrer'},
+      {id:'obs',   afc:'AFC 4', label:'Observer / coacher'},
+      {id:'res',   afc:'AFC 5', label:'Accepter, analyser le résultat'}
+    ]
+  };
+  const isMotor = c => c.afc === 'AFC 1' || c.afc === 'AFC 2';
+  const defaultWeights = lvl => Object.fromEntries(CRITS[lvl].map(c => [c.id, isMotor(c) ? 2 : 1]));
+
+  // ---------- État ----------
+  const KEY = 'eps-badminton-notation-v1';
+  let state = load() || {
+    classes: {}, current: null, dir: 'right', rounding: 0.5,
+    weights: {'4': defaultWeights('4'), '3': defaultWeights('3')}
+  };
+  for (const l of ['4','3']) state.weights[l] = Object.assign(defaultWeights(l), state.weights[l] || {});
+
+  function load(){ try { return JSON.parse(localStorage.getItem(KEY)); } catch(e){ return null; } }
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){} }
+
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+  const norm = s => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+  const fmt = n => n == null ? '–' : (Math.round(n*100)/100).toString().replace('.', ',');
+  const uid = () => Math.random().toString(36).slice(2, 10);
+  function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('on'), 1800); }
+
+  const cls = () => state.classes[state.current];
+  const crits = () => CRITS[cls()?.level || '4'];
+
+  // ---------- Calcul de la note ----------
+  function computeNote(st, level){
+    if (st.disp) return null;
+    const w = state.weights[level];
+    let s = 0, sw = 0, filled = 0;
+    for (const c of CRITS[level]) {
+      const v = st.notes[c.id];
+      if (v) { s += v * w[c.id]; sw += w[c.id]; filled++; }
+    }
+    if (!sw) return null;
+    const step = +state.rounding || 0.1;
+    const note = Math.round((s / sw * 5) / step) * step;
+    return { note, complete: filled === CRITS[level].length };
+  }
+
+  // ---------- Import ----------
+  function guessLevel(name){ return /^\s*3/.test(name) ? '3' : '4'; }
+  function normSexe(s){
+    const n = norm(s);
+    if (!n) return '';
+    if (n[0] === 'f') return 'F';
+    if (n[0] === 'g' || n[0] === 'm' || n[0] === 'h') return 'G';
+    return s.trim().toUpperCase();
+  }
+  function splitLine(line, d){
+    const out = []; let cur = '', q = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') { if (q && line[i+1] === '"') { cur += '"'; i++; } else q = !q; }
+      else if (ch === d && !q) { out.push(cur.trim()); cur = ''; }
+      else cur += ch;
+    }
+    out.push(cur.trim());
+    return out;
+  }
+  function parseImport(text, defClass){
+    const lines = text.replace(/^\ufeff/,'').replace(/\r/g,'').split('\n').filter(l => l.trim());
+    if (!lines.length) return [];
+    const first = lines[0];
+    const d = ['\t',';',','].map(c => [c, first.split(c).length]).sort((a,b)=>b[1]-a[1])[0][0];
+    let rows = lines.map(l => splitLine(l, d));
+    let idx = {nom:0, prenom:1, classe:2, sexe:3, eleve:-1};
+    const h = rows[0].map(norm);
+    if (h.some(x => x === 'nom' || x.includes('prenom') || x.includes('eleve') || x === 'classe')) {
+      const find = f => h.findIndex(f);
+      idx = {
+        nom:    find(x => x === 'nom' || (x.startsWith('nom') && !x.includes('prenom'))),
+        prenom: find(x => x.includes('prenom')),
+        classe: find(x => x.includes('classe') || x.includes('division')),
+        sexe:   find(x => x.includes('sexe') || x.includes('genre')),
+        eleve:  find(x => x.includes('eleve'))
+      };
+      rows = rows.slice(1);
+    }
+    const res = [];
+    for (const r of rows) {
+      let nom = idx.nom >= 0 ? r[idx.nom] : '', prenom = idx.prenom >= 0 ? r[idx.prenom] : '';
+      if (!nom && idx.eleve >= 0 && r[idx.eleve]) {           // « DUPONT Léa » dans une seule colonne
+        const parts = r[idx.eleve].split(/\s+/);
+        const up = parts.filter(p => p === p.toUpperCase() && /\p{L}/u.test(p));
+        nom = up.join(' '); prenom = parts.filter(p => !up.includes(p)).join(' ');
+      }
+      if (!nom && !prenom) continue;
+      const classe = (idx.classe >= 0 && r[idx.classe]) ? r[idx.classe].trim() : (defClass || 'Sans classe');
+      res.push({ nom: (nom||'').toUpperCase(), prenom: prenom || '', classe, sexe: normSexe(idx.sexe >= 0 ? r[idx.sexe] : '') });
+    }
+    return res;
+  }
+  function addStudents(list){
+    let added = 0, firstClass = null;
+    for (const s of list) {
+      const c = state.classes[s.classe] ||= { level: guessLevel(s.classe), students: [] };
+      firstClass ||= s.classe;
+      if (c.students.some(x => norm(x.nom) === norm(s.nom) && norm(x.prenom) === norm(s.prenom))) continue;
+      c.students.push({ id: uid(), nom: s.nom, prenom: s.prenom, sexe: s.sexe, disp: false, notes: {} });
+      added++;
+    }
+    for (const c of Object.values(state.classes)) sortStudents(c);
+    if (firstClass) state.current = firstClass;
+    return added;
+  }
+  function sortStudents(c){ c.students.sort((a,b) => (a.nom+' '+a.prenom).localeCompare(b.nom+' '+b.prenom, 'fr')); }
+
+  // ---------- Rendu ----------
+  function renderAll(){ renderHeader(); renderGrid(); renderWeights(); renderStats(); save(); }
+
+  function renderHeader(){
+    const names = Object.keys(state.classes).sort((a,b)=>a.localeCompare(b,'fr',{numeric:true}));
+    if (!state.classes[state.current]) state.current = names[0] || null;
+    $('#selClass').innerHTML = names.length ? names.map(n => `<option ${n===state.current?'selected':''}>${esc(n)}</option>`).join('') : '<option>—</option>';
+    $('#selLevel').value = cls()?.level || '4';
+    $('#selLevel').disabled = $('#selClass').disabled = !cls();
+    $('#selDir').value = state.dir;
+    $('#selRound').value = String(state.rounding);
+    $('#printTitle').textContent = cls() ? `Badminton – ${state.current} (grille ${cls().level}ème)` : '';
+  }
+
+  function renderGrid(){
+    const area = $('#gridArea');
+    const c = cls();
+    if (!c) {
+      area.innerHTML = `<div class="card empty"><h2>Aucune classe</h2><p class="hint">Cliquez sur « Importer une classe » et collez votre liste, par exemple :</p><pre>NOM	PRENOM	CLASSE	SEXE\nDUPONT	Léa	4A	F\nMARTIN	Hugo	4A	G</pre></div>`;
+      return;
+    }
+    const cr = crits(), w = state.weights[c.level];
+    let h = `<div class="gridwrap"><table class="grid" id="grid"><thead><tr>
+      <th>#</th><th style="text-align:left">Nom</th><th style="text-align:left">Prénom</th><th>S.</th><th title="Dispensé / absent">Disp.</th>`;
+    cr.forEach((k, ci) => {
+      h += `<th><span class="afc">${k.afc}</span><span class="lab">${esc(k.label)}</span><span class="w">coef ${fmt(w[k.id])}</span>
+            <button class="small colfill" data-col="${ci}" title="Met 3 dans les cases vides de cette colonne">vides→3</button></th>`;
+    });
+    h += `<th>Note<br>/20</th><th class="noprint"></th></tr></thead><tbody>`;
+    c.students.forEach((s, ri) => {
+      h += `<tr class="${s.disp?'disp':''}" data-r="${ri}"><td>${ri+1}</td><td class="name"><b>${esc(s.nom)}</b></td><td class="name">${esc(s.prenom)}</td><td>${esc(s.sexe)}</td>
+            <td><input type="checkbox" class="dispbox" data-r="${ri}" ${s.disp?'checked':''}></td>`;
+      cr.forEach((k, ci) => {
+        const v = s.notes[k.id] || '';
+        h += `<td class="cell ${v?'v'+v:''}" tabindex="0" data-r="${ri}" data-c="${ci}">${v}</td>`;
+      });
+      h += `<td class="note" id="note-${ri}"></td><td class="noprint"><button class="del" data-r="${ri}" title="Retirer l'élève">×</button></td></tr>`;
+    });
+    h += `</tbody><tfoot><tr><td colspan="5" style="text-align:right">Moyenne de la classe</td>`;
+    cr.forEach((k, ci) => h += `<td id="avg-${ci}"></td>`);
+    h += `<td id="avg-note"></td><td class="noprint"></td></tr></tfoot></table></div>`;
+    area.innerHTML = h;
+    c.students.forEach((s, ri) => updateNote(ri));
+    updateFooter();
+  }
+
+  function updateNote(ri){
+    const c = cls(), s = c.students[ri], td = document.getElementById('note-'+ri);
+    if (!td) return;
+    if (s.disp) { td.textContent = 'Disp.'; td.className = 'note partial'; return; }
+    const r = computeNote(s, c.level);
+    td.textContent = r ? fmt(r.note) + (r.complete ? '' : ' *') : '';
+    td.className = 'note' + (r && !r.complete ? ' partial' : '');
+    td.title = r && !r.complete ? 'Note provisoire : tous les critères ne sont pas remplis' : '';
+  }
+
+  function updateFooter(){
+    const c = cls(); if (!c) return;
+    const act = c.students.filter(s => !s.disp);
+    crits().forEach((k, ci) => {
+      const vals = act.map(s => s.notes[k.id]).filter(Boolean);
+      const el = document.getElementById('avg-'+ci);
+      if (el) el.textContent = vals.length ? fmt(vals.reduce((a,b)=>a+b,0)/vals.length) : '';
+    });
+    const notes = act.map(s => computeNote(s, c.level)).filter(r => r && r.complete).map(r => r.note);
+    const el = document.getElementById('avg-note');
+    if (el) el.textContent = notes.length ? fmt(notes.reduce((a,b)=>a+b,0)/notes.length) : '';
+    renderStats();
+  }
+
+  function renderStats(){
+    const c = cls(), box = $('#stats');
+    if (!c) { box.innerHTML = 'Aucune classe.'; return; }
+    const act = c.students.filter(s => !s.disp);
+    const done = act.map(s => ({s, r: computeNote(s, c.level)})).filter(x => x.r && x.r.complete);
+    const avg = arr => arr.length ? fmt(arr.reduce((a,b)=>a+b,0)/arr.length) : '–';
+    const notes = done.map(x => x.r.note);
+    const nF = done.filter(x => x.s.sexe === 'F').map(x => x.r.note);
+    const nG = done.filter(x => x.s.sexe === 'G').map(x => x.r.note);
+    const totalCells = act.length * crits().length;
+    const filled = act.reduce((n, s) => n + crits().filter(k => s.notes[k.id]).length, 0);
+    box.innerHTML = `
+      <div class="stat"><span>Élèves</span><b>${c.students.length}${c.students.length-act.length ? ` <span class="hint">(${c.students.length-act.length} disp.)</span>`:''}</b></div>
+      <div class="stat"><span>Cases remplies</span><b>${filled} / ${totalCells}</b></div>
+      <div class="stat"><span>Notes complètes</span><b>${done.length} / ${act.length}</b></div>
+      <div class="stat"><span>Moyenne de la classe</span><b>${avg(notes)}</b></div>
+      <div class="stat"><span>Filles (${nF.length})</span><b>${avg(nF)}</b></div>
+      <div class="stat"><span>Garçons (${nG.length})</span><b>${avg(nG)}</b></div>
+      <div class="stat"><span>Min / Max</span><b>${notes.length ? fmt(Math.min(...notes))+' / '+fmt(Math.max(...notes)) : '–'}</b></div>`;
+  }
+
+  function renderWeights(){
+    const c = cls(), lvl = c?.level || '4', w = state.weights[lvl];
+    $('#weights').innerHTML = `<div class="hint" style="margin-bottom:4px">Grille ${lvl}ème</div>` + CRITS[lvl].map(k =>
+      `<label><span><b>${k.afc}</b> ${esc(k.label)}</span><input type="number" min="0" step="0.5" data-w="${k.id}" value="${w[k.id]}"></label>`).join('');
+    const tot = CRITS[lvl].reduce((a,k)=>a+(+w[k.id]||0),0);
+    const mot = CRITS[lvl].filter(isMotor).reduce((a,k)=>a+(+w[k.id]||0),0);
+    $('#motorShare').textContent = tot ? `Part de la motricité (AFC 1 et 2) : ${Math.round(mot/tot*100)} % de la note` : '';
+  }
+
+  // ---------- Saisie ----------
+  function cellEl(r, c){ return document.querySelector(`td.cell[data-r="${r}"][data-c="${c}"]`); }
+  function focusCell(r, c){ const el = cellEl(r, c); if (el) { el.focus(); el.scrollIntoView({block:'nearest', inline:'nearest'}); } }
+  function setValue(r, c, v){
+    const k = crits()[c], s = cls().students[r];
+    if (v) s.notes[k.id] = v; else delete s.notes[k.id];
+    const el = cellEl(r, c);
+    el.textContent = v || ''; el.className = 'cell' + (v ? ' v'+v : '');
+    updateNote(r); updateFooter(); save();
+  }
+  function moveNext(r, c){
+    const nr = cls().students.length, nc = crits().length;
+    for (let i = 0; i < nr * nc; i++) {
+      if (state.dir === 'right') { c++; if (c >= nc) { c = 0; r++; } }
+      else { r++; if (r >= nr) { r = 0; c++; } }
+      if (r >= nr || c >= nc) { toast('Fin de la grille ✔'); return; }
+      if (!cls().students[r].disp) return focusCell(r, c);
+    }
+  }
+
+  document.addEventListener('keydown', e => {
+    const td = e.target.closest?.('td.cell');
+    if (!td || e.ctrlKey || e.metaKey || e.altKey) return;
+    const r = +td.dataset.r, c = +td.dataset.c;
+    const azerty = {'&':1,'é':2,'"':3,"'":4};
+    let v = null;
+    if (/^(Digit|Numpad)[1-4]$/.test(e.code)) v = +e.code.slice(-1);
+    else if (['1','2','3','4'].includes(e.key)) v = +e.key;
+    else if (azerty[e.key]) v = azerty[e.key];
+    if (v) { e.preventDefault(); setValue(r, c, v); moveNext(r, c); return; }
+    if (['Backspace','Delete'].includes(e.key) || /^(Digit|Numpad)0$/.test(e.code) || e.key === 'à') { e.preventDefault(); setValue(r, c, null); return; }
+    const moves = {ArrowRight:[0,1], ArrowLeft:[0,-1], ArrowDown:[1,0], ArrowUp:[-1,0], Enter:[1,0]};
+    if (moves[e.key]) { e.preventDefault(); focusCell(r + moves[e.key][0], c + moves[e.key][1]); }
+  });
+
+  $('#gridArea').addEventListener('click', e => {
+    const fill = e.target.closest('.colfill');
+    if (fill) {
+      const ci = +fill.dataset.col, k = crits()[ci]; let n = 0;
+      cls().students.forEach(s => { if (!s.disp && !s.notes[k.id]) { s.notes[k.id] = 3; n++; } });
+      renderGrid(); save(); toast(`${n} case(s) mise(s) à 3`); return;
+    }
+    const del = e.target.closest('.del');
+    if (del) {
+      const s = cls().students[+del.dataset.r];
+      if (confirm(`Retirer ${s.prenom} ${s.nom} de la classe ?`)) { cls().students.splice(+del.dataset.r, 1); renderAll(); }
+    }
+  });
+  $('#gridArea').addEventListener('change', e => {
+    if (e.target.classList.contains('dispbox')) {
+      const r = +e.target.dataset.r; cls().students[r].disp = e.target.checked;
+      e.target.closest('tr').classList.toggle('disp', e.target.checked);
+      updateNote(r); updateFooter(); save();
+    }
+  });
+
+  // ---------- Barre d'outils ----------
+  $('#selClass').onchange = e => { state.current = e.target.value; renderAll(); };
+  $('#selLevel').onchange = e => { if (cls()) { cls().level = e.target.value; renderAll(); } };
+  $('#selDir').onchange = e => { state.dir = e.target.value; save(); };
+  $('#selRound').onchange = e => { state.rounding = +e.target.value; renderAll(); };
+  $('#weights').addEventListener('input', e => {
+    const id = e.target.dataset.w; if (!id) return;
+    const v = parseFloat(String(e.target.value).replace(',', '.'));
+    state.weights[cls()?.level || '4'][id] = isNaN(v) || v < 0 ? 0 : v;
+    const lvl = cls()?.level || '4', w = state.weights[lvl];
+    const tot = CRITS[lvl].reduce((a,k)=>a+(+w[k.id]||0),0), mot = CRITS[lvl].filter(isMotor).reduce((a,k)=>a+(+w[k.id]||0),0);
+    $('#motorShare').textContent = tot ? `Part de la motricité (AFC 1 et 2) : ${Math.round(mot/tot*100)} % de la note` : '';
+    if (cls()) { cls().students.forEach((s, i) => updateNote(i)); updateFooter();
+      document.querySelectorAll('#grid thead .w').forEach((el, i) => el.textContent = 'coef ' + fmt(w[crits()[i].id])); }
+    save();
+  });
+  $('#btnResetW').onclick = () => { const l = cls()?.level || '4'; state.weights[l] = defaultWeights(l); renderAll(); toast('Poids par défaut rétablis'); };
+
+  $('#btnFill3').onclick = () => {
+    if (!cls()) return; let n = 0;
+    cls().students.forEach(s => { if (!s.disp) crits().forEach(k => { if (!s.notes[k.id]) { s.notes[k.id] = 3; n++; } }); });
+    renderAll(); toast(`${n} case(s) mise(s) à 3`);
+  };
+  $('#btnAddStudent').onclick = () => {
+    if (!cls()) return toast("Importez d'abord une classe");
+    const nom = prompt('Nom de l\'élève :'); if (!nom) return;
+    const prenom = prompt('Prénom :') || '';
+    const sexe = normSexe(prompt('Sexe (F / G) :') || '');
+    cls().students.push({ id: uid(), nom: nom.toUpperCase(), prenom, sexe, disp: false, notes: {} });
+    sortStudents(cls()); renderAll();
+  };
+  $('#btnDelClass').onclick = () => {
+    if (!cls()) return;
+    if (confirm(`Supprimer définitivement la classe ${state.current} et toutes ses notes ?`)) { delete state.classes[state.current]; state.current = null; renderAll(); }
+  };
+  $('#btnPrint').onclick = () => window.print();
+
+  // ---------- Export ----------
+  function download(name, content, type){
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([content], {type}));
+    a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  const csvCell = v => { const s = String(v ?? ''); return /[;"\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; };
+  function classCSV(name){
+    const c = state.classes[name], cr = CRITS[c.level];
+    const rows = [['NOM','PRENOM','CLASSE','SEXE', ...cr.map(k => `${k.afc} ${k.label}`), 'NOTE /20']];
+    c.students.forEach(s => {
+      const r = computeNote(s, c.level);
+      rows.push([s.nom, s.prenom, name, s.sexe, ...cr.map(k => s.disp ? '' : (s.notes[k.id] || '')),
+        s.disp ? 'Disp.' : r ? fmt(r.note) + (r.complete ? '' : ' (provisoire)') : '']);
+    });
+    return rows.map(r => r.map(csvCell).join(';')).join('\r\n');
+  }
+  $('#btnCSV').onclick = () => { if (!cls()) return; download(`badminton_${state.current}.csv`, '\ufeff' + classCSV(state.current), 'text/csv;charset=utf-8'); };
+  $('#btnCSVAll').onclick = () => {
+    const names = Object.keys(state.classes); if (!names.length) return;
+    download('badminton_toutes_classes.csv', '\ufeff' + names.map(classCSV).join('\r\n\r\n'), 'text/csv;charset=utf-8');
+  };
+  $('#btnSave').onclick = () => download(`sauvegarde_badminton_${new Date().toISOString().slice(0,10)}.json`, JSON.stringify(state, null, 1), 'application/json');
+  $('#btnLoad').onclick = () => $('#fileLoad').click();
+  $('#fileLoad').onchange = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try {
+      const data = JSON.parse(await f.text());
+      if (!data.classes) throw 0;
+      if (confirm('Remplacer toutes les données actuelles par cette sauvegarde ?')) {
+        state = Object.assign({dir:'right', rounding:0.5, weights:{}}, data);
+        for (const l of ['4','3']) state.weights[l] = Object.assign(defaultWeights(l), state.weights[l] || {});
+        renderAll(); toast('Sauvegarde restaurée');
+      }
+    } catch(err) { alert('Fichier de sauvegarde invalide.'); }
+    e.target.value = '';
+  };
+
+  // ---------- Fenêtre d'import ----------
+  const dlg = $('#dlgImport');
+  function preview(){
+    const list = parseImport($('#importText').value, $('#importDefClass').value.trim());
+    const byClass = {};
+    list.forEach(s => byClass[s.classe] = (byClass[s.classe]||0) + 1);
+    $('#importPreview').textContent = list.length
+      ? `${list.length} élève(s) détecté(s) : ` + Object.entries(byClass).map(([k,v]) => `${k} (${v}, grille ${guessLevel(k)}ème)`).join(', ')
+      : '';
+  }
+  $('#btnImport').onclick = () => { $('#importText').value = ''; $('#importPreview').textContent = ''; dlg.showModal(); };
+  $('#btnImportCancel').onclick = () => dlg.close();
+  $('#importText').addEventListener('input', preview);
+  $('#importDefClass').addEventListener('input', preview);
+  $('#importFile').onchange = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    const buf = await f.arrayBuffer();
+    let txt = new TextDecoder('utf-8').decode(buf);
+    if (txt.includes('\ufffd')) txt = new TextDecoder('windows-1252').decode(buf);   // CSV Excel « ANSI »
+    $('#importText').value = txt; preview(); e.target.value = '';
+  };
+  $('#btnDemo').onclick = () => {
+    const noms = [['BERNARD','Emma','F'],['DUBOIS','Lucas','G'],['DURAND','Chloé','F'],['FONTAINE','Nathan','G'],['GARNIER','Inès','F'],['LAMBERT','Hugo','G'],['LEROY','Manon','F'],['MOREAU','Louis','G'],['PETIT','Jade','F'],['ROUSSEAU','Adam','G']];
+    $('#importText').value = 'NOM\tPRENOM\tCLASSE\tSEXE\n' + noms.map(n => `${n[0]}\t${n[1]}\t4Exemple\t${n[2]}`).join('\n');
+    preview();
+  };
+  $('#btnImportOk').onclick = () => {
+    const list = parseImport($('#importText').value, $('#importDefClass').value.trim());
+    if (!list.length) return alert('Aucun élève reconnu. Vérifiez le format : NOM / PRÉNOM / CLASSE / SEXE.');
+    const n = addStudents(list);
+    dlg.close(); renderAll(); toast(`${n} élève(s) importé(s)`);
+    setTimeout(() => focusCell(0, 0), 50);
+  };
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
