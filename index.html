@@ -166,7 +166,7 @@
         </select>
       </div>
       <div class="row">
-        <label class="hint">Nombre de poules :</label>
+        <label class="hint">Nombre de poules (cette classe) :</label>
         <input type="number" id="inNbPoules" min="1" max="12" step="1" style="width:60px">
       </div>
       <div class="hint" id="perfExplain"></div>
@@ -300,13 +300,13 @@ MARTIN	Hugo	4A	G"></textarea>
   // ---------- Calcul de la note ----------
   // Perf /5 : plancher selon la poule (poule 1 = la plus forte) + 2 points × part de victoires.
   // Avec 5 poules : poule 1 → 3 à 5 · poule 2 → 2,5 à 4,5 · poule 3 → 2 à 4 · poule 4 → 1,5 à 3,5 · poule 5 → 1 à 3.
-  const perfFloor = p => { const nb = Math.max(1, +state.nbPoules || 5); return nb > 1 ? 3 - (Math.min(Math.max(p,1),nb) - 1) * 2 / (nb - 1) : 3; };
-  function computePerf(st){
+  const perfFloor = (p, nbP) => { const nb = Math.max(1, +nbP || +state.nbPoules || 5); return nb > 1 ? 3 - (Math.min(Math.max(p,1),nb) - 1) * 2 / (nb - 1) : 3; };
+  function computePerf(st, nb){
     const pf = st.perf; if (!pf || !(+pf.poule) || !(+pf.j)) return null;
     const ratio = Math.min(Math.max((+pf.v || 0) / (+pf.j), 0), 1);
-    return perfFloor(+pf.poule) + 2 * ratio;
+    return perfFloor(+pf.poule, nb) + 2 * ratio;
   }
-  function computeNote(st, level){
+  function computeNote(st, level, nb){
     if (st.disp) return null;
     const w = state.weights[level];
     let s = 0, sw = 0, filled = 0;
@@ -315,7 +315,7 @@ MARTIN	Hugo	4A	G"></textarea>
       if (v) { s += v * w[c.id]; sw += w[c.id]; filled++; }
     }
     const P = +state.perfPts || 0;
-    const perf = P ? computePerf(st) : null;
+    const perf = P ? computePerf(st, nb) : null;
     if (!sw && perf == null) return null;
     const grid = sw ? s / sw * 5 : null;                      // grille /20
     let raw;
@@ -458,7 +458,7 @@ MARTIN	Hugo	4A	G"></textarea>
     if (!td) return;
     const g = document.getElementById('grid-'+ri), pe = document.getElementById('perf-'+ri);
     if (s.disp) { td.textContent = 'Disp.'; td.className = 'note partial'; if (g) g.textContent = ''; if (pe) pe.textContent = ''; return; }
-    const r = computeNote(s, c.level);
+    const r = computeNote(s, c.level, c.nbPoules);
     if (g) g.textContent = r && r.grid != null ? fmt(Math.round(r.grid * 10) / 10) : '';
     if (pe) pe.textContent = r && r.perf != null ? fmt(Math.round(r.perf * 4) / 4) : '';
     td.textContent = r ? fmt(r.note) + (r.complete ? '' : ' *') : '';
@@ -474,11 +474,11 @@ MARTIN	Hugo	4A	G"></textarea>
       const el = document.getElementById('avg-'+ci);
       if (el) el.textContent = vals.length ? fmt(vals.reduce((a,b)=>a+b,0)/vals.length) : '';
     });
-    const notes = act.map(s => computeNote(s, c.level)).filter(r => r && r.complete).map(r => r.note);
+    const notes = act.map(s => computeNote(s, c.level, c.nbPoules)).filter(r => r && r.complete).map(r => r.note);
     const el = document.getElementById('avg-note');
     if (el) el.textContent = notes.length ? fmt(notes.reduce((a,b)=>a+b,0)/notes.length) : '';
     const avg = arr => arr.length ? fmt(Math.round(arr.reduce((a,b)=>a+b,0)/arr.length*100)/100) : '';
-    const rs = act.map(s => computeNote(s, c.level)).filter(Boolean);
+    const rs = act.map(s => computeNote(s, c.level, c.nbPoules)).filter(Boolean);
     const eg = document.getElementById('avg-grid'); if (eg) eg.textContent = avg(rs.map(r => r.grid).filter(v => v != null));
     const ep = document.getElementById('avg-perf'); if (ep) ep.textContent = avg(rs.map(r => r.perf).filter(v => v != null));
     renderStats();
@@ -488,7 +488,7 @@ MARTIN	Hugo	4A	G"></textarea>
     const c = cls(), box = $('#stats');
     if (!c) { box.innerHTML = 'Aucune classe.'; return; }
     const act = c.students.filter(s => !s.disp);
-    const done = act.map(s => ({s, r: computeNote(s, c.level)})).filter(x => x.r && x.r.complete);
+    const done = act.map(s => ({s, r: computeNote(s, c.level, c.nbPoules)})).filter(x => x.r && x.r.complete);
     const avg = arr => arr.length ? fmt(arr.reduce((a,b)=>a+b,0)/arr.length) : '–';
     const notes = done.map(x => x.r.note);
     const nF = done.filter(x => x.s.sexe === 'F').map(x => x.r.note);
@@ -587,16 +587,17 @@ MARTIN	Hugo	4A	G"></textarea>
 
   function renderPerfPanel(){
     $('#selPerfPts').value = String(+state.perfPts || 0);
-    $('#inNbPoules').value = +state.nbPoules || 5;
-    const P = +state.perfPts || 0, nb = +state.nbPoules || 5;
+    const nb = +(cls() && cls().nbPoules) || +state.nbPoules || 5;
+    $('#inNbPoules').value = nb;
+    const P = +state.perfPts || 0;
     if (!P) { $('#perfExplain').textContent = 'La note est calculée sur la grille seule.'; $('#perfBareme').innerHTML = ''; return; }
     $('#perfExplain').innerHTML = `Note /20 = grille ramenée sur ${20 - P} + perf ramenée sur ${P}.<br>Perf /5 = plancher de la poule + 2 × (victoires ÷ matchs joués). La poule 1 est la plus forte.`;
     let t = '<table class="bareme"><tr><th>Poule</th><th>0 victoire</th><th>50 %</th><th>100 %</th></tr>';
-    for (let p = 1; p <= nb; p++) { const f = perfFloor(p); t += `<tr><td>${p}</td><td>${fmt(f)}</td><td>${fmt(f+1)}</td><td>${fmt(f+2)}</td></tr>`; }
+    for (let p = 1; p <= nb; p++) { const f = perfFloor(p, nb); t += `<tr><td>${p}</td><td>${fmt(f)}</td><td>${fmt(f+1)}</td><td>${fmt(f+2)}</td></tr>`; }
     $('#perfBareme').innerHTML = t + '</table>';
   }
   $('#selPerfPts').onchange = e => { state.perfPts = +e.target.value; renderAll(); };
-  $('#inNbPoules').addEventListener('change', e => { state.nbPoules = Math.min(12, Math.max(1, parseInt(e.target.value, 10) || 5)); renderAll(); });
+  $('#inNbPoules').addEventListener('change', e => { const v = Math.min(12, Math.max(1, parseInt(e.target.value, 10) || 5)); if (cls()) cls().nbPoules = v; else state.nbPoules = v; renderAll(); });
 
   // ---------- Barre d'outils ----------
   $('#classTabs').addEventListener('click', e => { const b = e.target.closest('button[data-class]'); if (b) { state.current = b.dataset.class; renderAll(); } });
@@ -648,7 +649,7 @@ MARTIN	Hugo	4A	G"></textarea>
     const P = +state.perfPts || 0;
     const rows = [['NOM','PRENOM','CLASSE','SEXE', ...cr.map(k => `${k.afc} ${k.label}`), ...(P ? ['GRILLE /20','POULE','V','J','PERF /5'] : []), 'NOTE /20']];
     c.students.forEach(s => {
-      const r = computeNote(s, c.level), pf = s.perf || {};
+      const r = computeNote(s, c.level, c.nbPoules), pf = s.perf || {};
       const perfCols = !P ? [] : s.disp ? ['','','','',''] : [
         r && r.grid != null ? fmt(Math.round(r.grid*10)/10) : '', pf.poule ?? '', pf.v ?? '', pf.j ?? '',
         r && r.perf != null ? fmt(Math.round(r.perf*4)/4) : ''];
@@ -796,17 +797,25 @@ MARTIN	Hugo	4A	G"></textarea>
     state.current = names[0] || null;
   }
 
-  // Résultats du tournoi 3B (poules du 17/11/2026) : [NOM, Prénom, poule, victoires, matchs joués]
-  const PERF_VERSION = 'tournoi-3B-2026-11-17';
-  const PERF_PRESET = [["BREMOND", "Alexis", 1, 3, 4], ["BICGEL", "Léo", 1, 2, 4], ["MAILLARD", "Pierre", 1, 2, 3], ["CONSTANTIN", "Romeo", 1, 1, 4], ["DAVID", "Alexis", 1, 1, 3], ["LOSQ FEAU", "Axel", 2, 4, 4], ["KABAMBA", "Christivie", 2, 3, 4], ["ALVES", "Hugo", 2, 2, 4], ["JOUANNET DE LASSEE", "Charlotte", 2, 1, 4], ["SOUCHON", "Capucine", 2, 0, 4], ["MOHAMED", "Dawoud", 3, 2, 2], ["BEYOMA MAKITAKANA", "Eunice-Lydie", 3, 1, 2], ["FOILLARD", "Joséphine", 3, 0, 1], ["VIGIER", "Laylanee", 4, 3, 3], ["SIMIER", "Heloise", 4, 2, 3], ["RADUC", "Segolene", 4, 1, 3], ["RAWNAD", "Tahia", 4, 0, 3], ["ROBART", "Emma", 5, 3, 3], ["GLIMOIS", "Mathilde", 5, 2, 3], ["TROISE", "Michelle", 5, 1, 3], ["CORNESCHI", "David", 5, 0, 3]];
-  if (state.perfPreset !== PERF_VERSION) {
-    const c3 = state.classes['3B'];
-    if (c3) for (const [nom, prenom, poule, v, j] of PERF_PRESET) {
-      const st = c3.students.find(x => norm(x.nom) === norm(nom) && norm(x.prenom) === norm(prenom));
-      if (st && !(st.perf && st.perf.poule)) st.perf = { poule, v, j };
+  // Résultats des tournois : [NOM, Prénom, poule, victoires, matchs joués]
+  const PERF_PRESETS = [
+    { id: 'tournoi-3B-2026-11-17', classe: '3B', nbPoules: 5, data: [["BREMOND", "Alexis", 1, 3, 4], ["BICGEL", "Léo", 1, 2, 4], ["MAILLARD", "Pierre", 1, 2, 3], ["CONSTANTIN", "Romeo", 1, 1, 4], ["DAVID", "Alexis", 1, 1, 3], ["LOSQ FEAU", "Axel", 2, 4, 4], ["KABAMBA", "Christivie", 2, 3, 4], ["ALVES", "Hugo", 2, 2, 4], ["JOUANNET DE LASSEE", "Charlotte", 2, 1, 4], ["SOUCHON", "Capucine", 2, 0, 4], ["MOHAMED", "Dawoud", 3, 2, 2], ["BEYOMA MAKITAKANA", "Eunice-Lydie", 3, 1, 2], ["FOILLARD", "Joséphine", 3, 0, 1], ["VIGIER", "Laylanee", 4, 3, 3], ["SIMIER", "Heloise", 4, 2, 3], ["RADUC", "Segolene", 4, 1, 3], ["RAWNAD", "Tahia", 4, 0, 3], ["ROBART", "Emma", 5, 3, 3], ["GLIMOIS", "Mathilde", 5, 2, 3], ["TROISE", "Michelle", 5, 1, 3], ["CORNESCHI", "David", 5, 0, 3]] },
+    { id: 'tournoi-4A-2026-11-17', classe: '4A', nbPoules: 6, data: [["DEBANO", "Alexandre", 1, 4, 4], ["ELALAM", "Haroun", 1, 2, 4], ["BENAÏSSA", "Kaïss", 1, 2, 4], ["CARENINI", "Maël", 1, 2, 4], ["BATTESTINI-AVARGUES", "Arsène", 1, 0, 4], ["FAIVRE", "Baptiste", 2, 3, 3], ["BRIMONT", "Ferdinand", 2, 2, 3], ["VIEILLEFOND", "Blanche", 2, 1, 3], ["PANTIS", "Darius", 2, 0, 3], ["DESPRAT DI BENEDETTO", "Anna", 3, 3, 3], ["GANDIL", "Manon", 3, 2, 3], ["DOMENEC", "Chloé", 3, 1, 3], ["REBELO - ESPANHOL", "Bianca", 3, 0, 3], ["BINET", "Guillaume", 4, 3, 3], ["DUVEAU", "Constance", 4, 2, 3], ["LENNUYEUX", "Rachel", 4, 1, 3], ["EL AWAR", "Lara", 4, 0, 3], ["DAVIET - GOMES", "Haley", 5, 3, 3], ["MCHANGAMA", "An-Icha", 5, 1, 3], ["ALLEAUME-NDJOCK", "Maïlys", 5, 1, 3], ["NASSEREDDINE", "Léa", 5, 1, 3], ["LEMAITRE", "Romane", 6, 2, 3], ["THERINCA", "Lya", 6, 2, 3], ["DEPOUX", "Anaïs", 6, 1, 3], ["CHENU", "Hermine", 6, 1, 3]] }
+  ];
+  state.perfPresets = state.perfPresets || (state.perfPreset ? [state.perfPreset] : []);
+  for (const pr of PERF_PRESETS) {
+    if (state.perfPresets.includes(pr.id)) continue;
+    const c = state.classes[pr.classe];
+    if (!c) continue;
+    if (!c.nbPoules) c.nbPoules = pr.nbPoules;
+    for (const [nom, prenom, poule, v, j] of pr.data) {
+      const st = c.students.find(x => norm(x.nom) === norm(nom) && norm(x.prenom) === norm(prenom));
+      if (st && !(st.perf && st.perf.poule)) st.perf = { poule, v, j };      // ne remplace jamais une saisie existante
     }
-    state.perfPreset = PERF_VERSION;
+    state.perfPresets.push(pr.id);
   }
+  // la 3B (déjà importée avant ce réglage) garde ses 5 poules
+  if (state.classes['3B'] && !state.classes['3B'].nbPoules) state.classes['3B'].nbPoules = 5;
 
   renderAll();
 })();
