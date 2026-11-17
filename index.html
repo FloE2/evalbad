@@ -69,6 +69,13 @@
   .tabs{display:flex;gap:5px;flex-wrap:wrap}
   .tabs button{border-radius:18px;padding:4px 14px;font-weight:600}
   .tabs button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .grid td.perfcell{background:#fffaf0!important;padding:2px}
+  .grid input.pin{width:42px;padding:3px 2px;text-align:center;font:inherit;font-size:14px;border:1px solid var(--line);border-radius:4px}
+  .grid th.perfh{background:#fbeed5!important}
+  .grid td.gridnote{color:var(--mute);font-size:13px}
+  .bareme{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:6px}
+  .bareme th,.bareme td{border:1px solid var(--line-strong);padding:3px 5px;text-align:center}
+  .bareme th{background:#fbeed5}
   #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d1d1b;color:#fff;padding:8px 16px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none}
   #toast.on{opacity:1}
   @media (max-width:1000px){main{grid-template-columns:1fr}}
@@ -147,6 +154,23 @@
         </select>
       </div>
       <button id="btnResetW" class="small">Poids par défaut</button>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h2>Note de performance (tournoi)</h2>
+      <div class="row" style="margin-top:0">
+        <label class="hint">Points sur 20 :</label>
+        <select id="selPerfPts">
+          <option value="0">0 (pas de perf)</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+          <option value="5">5</option><option value="6">6</option><option value="8">8</option><option value="10">10</option>
+        </select>
+      </div>
+      <div class="row">
+        <label class="hint">Nombre de poules :</label>
+        <input type="number" id="inNbPoules" min="1" max="12" step="1" style="width:60px">
+      </div>
+      <div class="hint" id="perfExplain"></div>
+      <div id="perfBareme"></div>
     </div>
 
     <div class="card keys" style="margin-top:14px">
@@ -232,6 +256,8 @@ MARTIN	Hugo	4A	G"></textarea>
     classes: {}, current: null, dir: 'right', rounding: 0.5,
     weights: {'4': defaultWeights('4'), '3': defaultWeights('3')}
   };
+  if (state.perfPts == null) state.perfPts = 5;
+  if (state.nbPoules == null) state.nbPoules = 5;
   for (const l of ['4','3']) state.weights[l] = Object.assign(defaultWeights(l), state.weights[l] || {});
 
   // ---------- Classes de l'année intégrées au fichier (ajoutées une seule fois) ----------
@@ -272,6 +298,14 @@ MARTIN	Hugo	4A	G"></textarea>
   const crits = () => CRITS[cls()?.level || '4'];
 
   // ---------- Calcul de la note ----------
+  // Perf /5 : plancher selon la poule (poule 1 = la plus forte) + 2 points × part de victoires.
+  // Avec 5 poules : poule 1 → 3 à 5 · poule 2 → 2,5 à 4,5 · poule 3 → 2 à 4 · poule 4 → 1,5 à 3,5 · poule 5 → 1 à 3.
+  const perfFloor = p => { const nb = Math.max(1, +state.nbPoules || 5); return nb > 1 ? 3 - (Math.min(Math.max(p,1),nb) - 1) * 2 / (nb - 1) : 3; };
+  function computePerf(st){
+    const pf = st.perf; if (!pf || !(+pf.poule) || !(+pf.j)) return null;
+    const ratio = Math.min(Math.max((+pf.v || 0) / (+pf.j), 0), 1);
+    return perfFloor(+pf.poule) + 2 * ratio;
+  }
   function computeNote(st, level){
     if (st.disp) return null;
     const w = state.weights[level];
@@ -280,10 +314,19 @@ MARTIN	Hugo	4A	G"></textarea>
       const v = st.notes[c.id];
       if (v) { s += v * w[c.id]; sw += w[c.id]; filled++; }
     }
-    if (!sw) return null;
+    const P = +state.perfPts || 0;
+    const perf = P ? computePerf(st) : null;
+    if (!sw && perf == null) return null;
+    const grid = sw ? s / sw * 5 : null;                      // grille /20
+    let raw;
+    if (!P) raw = grid;
+    else if (grid != null && perf != null) raw = grid * (20 - P) / 20 + perf * P / 5;
+    else if (grid != null) raw = grid;                        // perf manquante : note provisoire sur la grille seule
+    else raw = perf * 4;                                      // grille vide : note provisoire sur la perf seule
     const step = +state.rounding || 0.1;
-    const note = Math.round((s / sw * 5) / step) * step;
-    return { note, complete: filled === CRITS[level].length };
+    const note = Math.round(raw / step) * step;
+    const complete = filled === CRITS[level].length && (!P || perf != null);
+    return { note, complete, grid, perf };
   }
 
   // ---------- Import ----------
@@ -356,7 +399,7 @@ MARTIN	Hugo	4A	G"></textarea>
   function sortStudents(c){ c.students.sort((a,b) => (a.nom+' '+a.prenom).localeCompare(b.nom+' '+b.prenom, 'fr')); }
 
   // ---------- Rendu ----------
-  function renderAll(){ renderHeader(); renderGrid(); renderWeights(); renderStats(); save(); }
+  function renderAll(){ renderHeader(); renderGrid(); renderWeights(); renderPerfPanel(); renderStats(); save(); }
 
   function renderHeader(){
     const names = Object.keys(state.classes).sort((a,b)=>a.localeCompare(b,'fr',{numeric:true}));
@@ -383,6 +426,8 @@ MARTIN	Hugo	4A	G"></textarea>
       h += `<th><span class="afc">${k.afc}</span><span class="lab">${esc(k.label)}</span><span class="w">coef ${fmt(w[k.id])}</span>
             <button class="small colfill" data-col="${ci}" title="Met 3 dans les cases vides de cette colonne">vides→3</button></th>`;
     });
+    const P = +state.perfPts || 0;
+    if (P) h += `<th>Grille<br>/20</th><th class="perfh" title="Numéro de poule (1 = la plus forte)">Poule</th><th class="perfh">V</th><th class="perfh">J</th><th class="perfh">Perf<br>/5</th>`;
     h += `<th>Note<br>/20</th><th class="noprint"></th></tr></thead><tbody>`;
     c.students.forEach((s, ri) => {
       h += `<tr class="${s.disp?'disp':''}" data-r="${ri}"><td>${ri+1}</td><td class="name"><b>${esc(s.nom)}</b></td><td class="name">${esc(s.prenom)}</td><td>${esc(s.sexe)}</td>
@@ -391,10 +436,17 @@ MARTIN	Hugo	4A	G"></textarea>
         const v = s.notes[k.id] || '';
         h += `<td class="cell ${v?'v'+v:''}" tabindex="0" data-r="${ri}" data-c="${ci}">${v}</td>`;
       });
+      if (P) {
+        const pf = s.perf || {};
+        h += `<td class="gridnote" id="grid-${ri}"></td>` + ['poule','v','j'].map(k =>
+          `<td class="perfcell"><input class="pin" type="number" min="0" step="1" data-r="${ri}" data-k="${k}" value="${pf[k] ?? ''}"></td>`).join('') +
+          `<td class="perfcell" id="perf-${ri}" style="font-weight:600"></td>`;
+      }
       h += `<td class="note" id="note-${ri}"></td><td class="noprint"><button class="del" data-r="${ri}" title="Retirer l'élève">×</button></td></tr>`;
     });
     h += `</tbody><tfoot><tr><td colspan="5" style="text-align:right">Moyenne de la classe</td>`;
     cr.forEach((k, ci) => h += `<td id="avg-${ci}"></td>`);
+    if (P) h += `<td id="avg-grid"></td><td></td><td></td><td></td><td id="avg-perf"></td>`;
     h += `<td id="avg-note"></td><td class="noprint"></td></tr></tfoot></table></div>`;
     area.innerHTML = h;
     c.students.forEach((s, ri) => updateNote(ri));
@@ -404,11 +456,14 @@ MARTIN	Hugo	4A	G"></textarea>
   function updateNote(ri){
     const c = cls(), s = c.students[ri], td = document.getElementById('note-'+ri);
     if (!td) return;
-    if (s.disp) { td.textContent = 'Disp.'; td.className = 'note partial'; return; }
+    const g = document.getElementById('grid-'+ri), pe = document.getElementById('perf-'+ri);
+    if (s.disp) { td.textContent = 'Disp.'; td.className = 'note partial'; if (g) g.textContent = ''; if (pe) pe.textContent = ''; return; }
     const r = computeNote(s, c.level);
+    if (g) g.textContent = r && r.grid != null ? fmt(Math.round(r.grid * 10) / 10) : '';
+    if (pe) pe.textContent = r && r.perf != null ? fmt(Math.round(r.perf * 4) / 4) : '';
     td.textContent = r ? fmt(r.note) + (r.complete ? '' : ' *') : '';
     td.className = 'note' + (r && !r.complete ? ' partial' : '');
-    td.title = r && !r.complete ? 'Note provisoire : tous les critères ne sont pas remplis' : '';
+    td.title = r && !r.complete ? 'Note provisoire : critères ou performance manquants' : '';
   }
 
   function updateFooter(){
@@ -422,6 +477,10 @@ MARTIN	Hugo	4A	G"></textarea>
     const notes = act.map(s => computeNote(s, c.level)).filter(r => r && r.complete).map(r => r.note);
     const el = document.getElementById('avg-note');
     if (el) el.textContent = notes.length ? fmt(notes.reduce((a,b)=>a+b,0)/notes.length) : '';
+    const avg = arr => arr.length ? fmt(Math.round(arr.reduce((a,b)=>a+b,0)/arr.length*100)/100) : '';
+    const rs = act.map(s => computeNote(s, c.level)).filter(Boolean);
+    const eg = document.getElementById('avg-grid'); if (eg) eg.textContent = avg(rs.map(r => r.grid).filter(v => v != null));
+    const ep = document.getElementById('avg-perf'); if (ep) ep.textContent = avg(rs.map(r => r.perf).filter(v => v != null));
     renderStats();
   }
 
@@ -511,6 +570,34 @@ MARTIN	Hugo	4A	G"></textarea>
     }
   });
 
+  $('#gridArea').addEventListener('input', e => {
+    const inp = e.target.closest('input.pin'); if (!inp) return;
+    const r = +inp.dataset.r, s = cls().students[r];
+    s.perf = s.perf || {};
+    const v = inp.value === '' ? '' : Math.max(0, parseInt(inp.value, 10) || 0);
+    if (v === '') delete s.perf[inp.dataset.k]; else s.perf[inp.dataset.k] = v;
+    updateNote(r); updateFooter(); save();
+  });
+  $('#gridArea').addEventListener('keydown', e => {          // Entrée : même case, élève suivant
+    const inp = e.target.closest('input.pin'); if (!inp || e.key !== 'Enter') return;
+    e.preventDefault();
+    const nx = document.querySelector(`input.pin[data-r="${+inp.dataset.r + 1}"][data-k="${inp.dataset.k}"]`);
+    if (nx) { nx.focus(); nx.select(); }
+  });
+
+  function renderPerfPanel(){
+    $('#selPerfPts').value = String(+state.perfPts || 0);
+    $('#inNbPoules').value = +state.nbPoules || 5;
+    const P = +state.perfPts || 0, nb = +state.nbPoules || 5;
+    if (!P) { $('#perfExplain').textContent = 'La note est calculée sur la grille seule.'; $('#perfBareme').innerHTML = ''; return; }
+    $('#perfExplain').innerHTML = `Note /20 = grille ramenée sur ${20 - P} + perf ramenée sur ${P}.<br>Perf /5 = plancher de la poule + 2 × (victoires ÷ matchs joués). La poule 1 est la plus forte.`;
+    let t = '<table class="bareme"><tr><th>Poule</th><th>0 victoire</th><th>50 %</th><th>100 %</th></tr>';
+    for (let p = 1; p <= nb; p++) { const f = perfFloor(p); t += `<tr><td>${p}</td><td>${fmt(f)}</td><td>${fmt(f+1)}</td><td>${fmt(f+2)}</td></tr>`; }
+    $('#perfBareme').innerHTML = t + '</table>';
+  }
+  $('#selPerfPts').onchange = e => { state.perfPts = +e.target.value; renderAll(); };
+  $('#inNbPoules').addEventListener('change', e => { state.nbPoules = Math.min(12, Math.max(1, parseInt(e.target.value, 10) || 5)); renderAll(); });
+
   // ---------- Barre d'outils ----------
   $('#classTabs').addEventListener('click', e => { const b = e.target.closest('button[data-class]'); if (b) { state.current = b.dataset.class; renderAll(); } });
   $('#selLevel').onchange = e => { if (cls()) { cls().level = e.target.value; renderAll(); } };
@@ -558,10 +645,14 @@ MARTIN	Hugo	4A	G"></textarea>
   const csvCell = v => { const s = String(v ?? ''); return /[;"\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; };
   function classCSV(name){
     const c = state.classes[name], cr = CRITS[c.level];
-    const rows = [['NOM','PRENOM','CLASSE','SEXE', ...cr.map(k => `${k.afc} ${k.label}`), 'NOTE /20']];
+    const P = +state.perfPts || 0;
+    const rows = [['NOM','PRENOM','CLASSE','SEXE', ...cr.map(k => `${k.afc} ${k.label}`), ...(P ? ['GRILLE /20','POULE','V','J','PERF /5'] : []), 'NOTE /20']];
     c.students.forEach(s => {
-      const r = computeNote(s, c.level);
-      rows.push([s.nom, s.prenom, name, s.sexe, ...cr.map(k => s.disp ? '' : (s.notes[k.id] || '')),
+      const r = computeNote(s, c.level), pf = s.perf || {};
+      const perfCols = !P ? [] : s.disp ? ['','','','',''] : [
+        r && r.grid != null ? fmt(Math.round(r.grid*10)/10) : '', pf.poule ?? '', pf.v ?? '', pf.j ?? '',
+        r && r.perf != null ? fmt(Math.round(r.perf*4)/4) : ''];
+      rows.push([s.nom, s.prenom, name, s.sexe, ...cr.map(k => s.disp ? '' : (s.notes[k.id] || '')), ...perfCols,
         s.disp ? 'Disp.' : r ? fmt(r.note) + (r.complete ? '' : ' (provisoire)') : '']);
     });
     return rows.map(r => r.map(csvCell).join(';')).join('\r\n');
@@ -703,6 +794,18 @@ MARTIN	Hugo	4A	G"></textarea>
     state.seedVersion = SEED_VERSION;
     const names = Object.keys(state.classes).sort((a,b)=>a.localeCompare(b,'fr',{numeric:true}));
     state.current = names[0] || null;
+  }
+
+  // Résultats du tournoi 3B (poules du 17/11/2026) : [NOM, Prénom, poule, victoires, matchs joués]
+  const PERF_VERSION = 'tournoi-3B-2026-11-17';
+  const PERF_PRESET = [["BREMOND", "Alexis", 1, 3, 4], ["BICGEL", "Léo", 1, 2, 4], ["MAILLARD", "Pierre", 1, 2, 3], ["CONSTANTIN", "Romeo", 1, 1, 4], ["DAVID", "Alexis", 1, 1, 3], ["LOSQ FEAU", "Axel", 2, 4, 4], ["KABAMBA", "Christivie", 2, 3, 4], ["ALVES", "Hugo", 2, 2, 4], ["JOUANNET DE LASSEE", "Charlotte", 2, 1, 4], ["SOUCHON", "Capucine", 2, 0, 4], ["MOHAMED", "Dawoud", 3, 2, 2], ["BEYOMA MAKITAKANA", "Eunice-Lydie", 3, 1, 2], ["FOILLARD", "Joséphine", 3, 0, 1], ["VIGIER", "Laylanee", 4, 3, 3], ["SIMIER", "Heloise", 4, 2, 3], ["RADUC", "Segolene", 4, 1, 3], ["RAWNAD", "Tahia", 4, 0, 3], ["ROBART", "Emma", 5, 3, 3], ["GLIMOIS", "Mathilde", 5, 2, 3], ["TROISE", "Michelle", 5, 1, 3], ["CORNESCHI", "David", 5, 0, 3]];
+  if (state.perfPreset !== PERF_VERSION) {
+    const c3 = state.classes['3B'];
+    if (c3) for (const [nom, prenom, poule, v, j] of PERF_PRESET) {
+      const st = c3.students.find(x => norm(x.nom) === norm(nom) && norm(x.prenom) === norm(prenom));
+      if (st && !(st.perf && st.perf.poule)) st.perf = { poule, v, j };
+    }
+    state.perfPreset = PERF_VERSION;
   }
 
   renderAll();
