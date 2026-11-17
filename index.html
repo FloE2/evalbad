@@ -66,6 +66,9 @@
   .savestatus{font-size:12.5px;padding:3px 8px;border-radius:5px}
   .savestatus.ok{color:#2f6b25;background:#e3f1de}
   .savestatus.warn{color:#8a4b00;background:#fbe8c8;font-weight:600}
+  .tabs{display:flex;gap:5px;flex-wrap:wrap}
+  .tabs button{border-radius:18px;padding:4px 14px;font-weight:600}
+  .tabs button.active{background:var(--accent);border-color:var(--accent);color:#fff}
   #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d1d1b;color:#fff;padding:8px 16px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none}
   #toast.on{opacity:1}
   @media (max-width:1000px){main{grid-template-columns:1fr}}
@@ -76,6 +79,7 @@
     #printTitle{display:block!important}
   }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -87,7 +91,7 @@
   <div class="sep"></div>
   <div class="group">
     <label>Classe :</label>
-    <select id="selClass"></select>
+    <div id="classTabs" class="tabs"></div>
     <select id="selLevel" title="Niveau de la grille">
       <option value="4">Grille 4ème (8 critères)</option>
       <option value="3">Grille 3ème (9 critères)</option>
@@ -174,12 +178,12 @@
 
 <dialog id="dlgImport">
   <h2 style="margin-top:0">Importer des élèves</h2>
-  <p class="hint" style="margin-top:0">Copiez les colonnes depuis Excel ou Pronote et collez-les ci-dessous, ou choisissez un fichier .csv. Colonnes attendues : <b>NOM / PRÉNOM / CLASSE / SEXE</b> (avec ou sans ligne d'en-tête). Plusieurs classes peuvent être importées d'un coup.</p>
+  <p class="hint" style="margin-top:0">Copiez les colonnes depuis Excel ou Pronote et collez-les ci-dessous, ou choisissez un ou plusieurs fichiers <b>Excel (.xlsx)</b> ou .csv. Si le fichier n'a pas de colonne CLASSE, le nom du fichier sert de classe (ex. « 4A.xlsx » → 4A). Colonnes attendues : <b>NOM / PRÉNOM / CLASSE / SEXE</b> (avec ou sans ligne d'en-tête). Plusieurs classes peuvent être importées d'un coup.</p>
   <textarea id="importText" placeholder="NOM	PRENOM	CLASSE	SEXE
 DUPONT	Léa	4A	F
 MARTIN	Hugo	4A	G"></textarea>
   <div class="row">
-    <input type="file" id="importFile" accept=".csv,.txt">
+    <input type="file" id="importFile" accept=".xlsx,.xls,.ods,.csv,.txt" multiple>
     <label class="hint right">Classe si absente : <input type="text" id="importDefClass" size="6" placeholder="ex. 4B"></label>
   </div>
   <div class="hint" id="importPreview"></div>
@@ -231,7 +235,7 @@ MARTIN	Hugo	4A	G"></textarea>
   for (const l of ['4','3']) state.weights[l] = Object.assign(defaultWeights(l), state.weights[l] || {});
 
   // ---------- Classes de l'année intégrées au fichier (ajoutées une seule fois) ----------
-  const SEED_VERSION = '2026-2027-v1';
+  const SEED_VERSION = '2026-2027-v2';
   const SEED = /*SEED*/[["ALLEAUME-NDJOCK", "Maïlys", "4A", "F"], ["BATTESTINI-AVARGUES", "Arsène", "4A", "G"], ["BENAÏSSA", "Kaïss", "4A", "G"], ["BINET", "Guillaume", "4A", "G"], ["BRIMONT", "Ferdinand", "4A", "G"], ["CARENINI", "Maël", "4A", "G"], ["CHENU", "Hermine", "4A", "F"], ["CHOUK", "Rayan", "4A", "G"], ["DAVIET - GOMES", "Haley", "4A", "F"], ["DEBANO", "Alexandre", "4A", "G"], ["DEPOUX", "Anaïs", "4A", "F"], ["DESPRAT DI BENEDETTO", "Anna", "4A", "F"], ["DOMENEC", "Chloé", "4A", "F"], ["DUVEAU", "Constance", "4A", "F"], ["EL AWAR", "Lara", "4A", "F"], ["ELALAM", "Haroun", "4A", "G"], ["FAIVRE", "Baptiste", "4A", "G"], ["GANDIL", "Manon", "4A", "F"], ["LEMAITRE", "Romane", "4A", "F"], ["LENNUYEUX", "Rachel", "4A", "F"], ["MCHANGAMA", "An-Icha", "4A", "F"], ["NASSEREDDINE", "Léa", "4A", "F"], ["PANTIS", "Darius", "4A", "G"], ["REBELO - ESPANHOL", "Bianca", "4A", "F"], ["THERINCA", "Lya", "4A", "F"], ["VIEILLEFOND", "Blanche", "4A", "F"], ["ACHITE-HENNI", "Adèle", "3B", "F"], ["ALVES", "Hugo", "3B", "G"], ["BEYOMA MAKITAKANA", "Eunice-Lydie", "3B", "F"], ["BICGEL", "Léo", "3B", "G"], ["BREMOND", "Alexis", "3B", "G"], ["CIAMPI", "Clémence", "3B", "F"], ["CONSTANTIN", "Romeo", "3B", "G"], ["CORNESCHI", "David", "3B", "G"], ["DAVID", "Alexis", "3B", "G"], ["FOILLARD", "Joséphine", "3B", "F"], ["GLIMOIS", "Mathilde", "3B", "F"], ["JOUANNET DE LASSEE", "Charlotte", "3B", "F"], ["KABAMBA", "Christivie", "3B", "F"], ["LOSQ FEAU", "Axel", "3B", "G"], ["MAILLARD", "Pierre", "3B", "G"], ["MOHAMED", "Dawoud", "3B", "G"], ["PATIN", "Jade", "3B", "F"], ["RADUC", "Segolene", "3B", "F"], ["RAWNAD", "Tahia", "3B", "F"], ["ROBART", "Emma", "3B", "F"], ["ROGER", "Dimitri", "3B", "G"], ["SIMIER", "Heloise", "3B", "F"], ["SOUCHON", "Capucine", "3B", "F"], ["TROISE", "Michelle", "3B", "F"], ["VIGIER", "Laylanee", "3B", "F"], ["ZEBOUDJ", "Nadia", "3B", "F"], ["ATSOULI", "Nadir", "5A", "G"], ["BERTHY", "Mathis", "5A", "G"], ["CAPARROS", "Jules", "5A", "G"], ["CORNESCHI", "Marius", "5A", "G"], ["DE ALMEIDA", "Oscar", "5A", "G"], ["DEMAISON-MÉGARBANÉ", "Valentin", "5A", "G"], ["DENDOUNE-ROUSSET", "Oscar", "5A", "G"], ["GERNIGON", "Mathis", "5A", "G"], ["HADIDJA", "Ahmed", "5A", "G"], ["JAUBERT SOREIL", "Charlotte", "5A", "F"], ["JOYEUX", "Eva", "5A", "F"], ["LEMAIGRE", "Axel", "5A", "G"], ["MACHEBOEUF", "Océane", "5A", "F"], ["MESSIER LEY", "Lilian", "5A", "G"], ["MORCEL", "Anya", "5A", "F"], ["NOUMBI NDONGO", "Maëlys", "5A", "F"], ["POQUET", "Romann", "5A", "G"], ["RICHER", "Avril", "5A", "F"], ["RODRIGUEZ", "Alexandre", "5A", "G"], ["SEMINOR", "Noa", "5A", "F"], ["SILVA VARZIELA", "Leonor", "5A", "F"], ["SOURDEIX MENAGER", "Jordan", "5A", "G"], ["SOUSA CORREIA", "Alicia", "5A", "F"], ["STASYUK", "Mark", "5A", "G"], ["VIALETAY MARCOVICI", "Athenais", "5A", "F"], ["WATHLE", "Eliott", "5A", "G"], ["ABALDONATO", "Marius", "5C", "G"], ["BERROUANE HAVEZ", "Dario", "5C", "G"], ["BOSSU", "Valentin", "5C", "G"], ["CASANOVA", "Melody", "5C", "F"], ["CHILA", "Giacomo", "5C", "G"], ["COGNET", "Flore", "5C", "F"], ["COLLIARD", "Clémence", "5C", "F"], ["D'ARBIGNY", "Camille", "5C", "G"], ["DEKKICHE", "Massin", "5C", "G"], ["DIABATE", "Balla", "5C", "G"], ["DIAKITE", "Fansé", "5C", "G"], ["EL OSTA", "Khodr", "5C", "G"], ["ESSADQ", "Chaima", "5C", "F"], ["EYMAR", "Livia", "5C", "F"], ["FAYE", "Morgan", "5C", "G"], ["FRITZ", "Elise", "5C", "F"], ["HAMON", "Maelys", "5C", "F"], ["LAUGLÉ", "Charlise", "5C", "F"], ["PATRY", "Elise", "5C", "F"], ["PRIESTER", "Abel", "5C", "G"], ["RASSAA", "Selima", "5C", "F"], ["REHAN", "Arosh", "5C", "G"], ["ROUGIER", "Louis", "5C", "G"], ["SACKO", "Coumba", "5C", "F"], ["SIBERT", "Raphael", "5C", "G"], ["AGRIMANO", "Vera Franceska", "6B", "F"], ["AKHENKHAM", "Amel", "6B", "F"], ["BARDOU", "Juliette", "6B", "F"], ["BRUNEAU DE LA SALLE", "Gabin", "6B", "G"], ["CHAVANNE", "Leon", "6B", "G"], ["CHEVALIER", "Alexandre", "6B", "G"], ["COUSIN", "Marie-Astrid", "6B", "F"], ["CYRKLEWSKI", "Camilo", "6B", "G"], ["DAVY GOURVIL", "Tom", "6B", "G"], ["DUPA", "Gabrielle", "6B", "F"], ["EDORH", "Marcus", "6B", "G"], ["FINANCE", "Margot", "6B", "F"], ["FORTIER-BEAULIEU", "Emilie", "6B", "F"], ["HAMOUCH", "Ilham", "6B", "F"], ["JOUANNET DE LASSEE", "Jeanne", "6B", "F"], ["KONE", "David", "6B", "G"], ["LAXALT", "Armel", "6B", "G"], ["LECHEVALLIER", "Emma", "6B", "F"], ["LEMAITRE", "Manon", "6B", "F"], ["LIMOGES SALOMON", "Alessandra", "6B", "F"], ["LOPES BETTENCOURT", "Nicolas", "6B", "G"], ["MAGINA", "Jules", "6B", "G"], ["MIGNY", "Clémence", "6B", "F"], ["PAOLI", "Thibaud", "6B", "G"], ["PARAIN", "Victor", "6B", "G"], ["PRUVOT ITOUMBA", "Zoé", "6B", "F"], ["RAY", "Rajshree", "6B", "F"], ["SANGLIER", "Paul", "6B", "G"], ["TOMBECK", "Mathis", "6B", "G"], ["VIDAIRA", "Timothy", "6B", "G"]]/*END*/;
 
   function load(){ try { return JSON.parse(localStorage.getItem(KEY)); } catch(e){ return null; } }
@@ -352,9 +356,9 @@ MARTIN	Hugo	4A	G"></textarea>
   function renderHeader(){
     const names = Object.keys(state.classes).sort((a,b)=>a.localeCompare(b,'fr',{numeric:true}));
     if (!state.classes[state.current]) state.current = names[0] || null;
-    $('#selClass').innerHTML = names.length ? names.map(n => `<option ${n===state.current?'selected':''}>${esc(n)}</option>`).join('') : '<option>—</option>';
+    $('#classTabs').innerHTML = names.length ? names.map(n => `<button data-class="${esc(n)}" class="${n===state.current?'active':''}">${esc(n)} <span style="opacity:.7;font-weight:400">(${state.classes[n].students.length})</span></button>`).join('') : '<span class="hint">aucune</span>';
     $('#selLevel').value = cls()?.level || '4';
-    $('#selLevel').disabled = $('#selClass').disabled = !cls();
+    $('#selLevel').disabled = !cls();
     $('#selDir').value = state.dir;
     $('#selRound').value = String(state.rounding);
     $('#printTitle').textContent = cls() ? `Badminton – ${state.current} (grille ${cls().level}ème)` : '';
@@ -503,7 +507,7 @@ MARTIN	Hugo	4A	G"></textarea>
   });
 
   // ---------- Barre d'outils ----------
-  $('#selClass').onchange = e => { state.current = e.target.value; renderAll(); };
+  $('#classTabs').addEventListener('click', e => { const b = e.target.closest('button[data-class]'); if (b) { state.current = b.dataset.class; renderAll(); } });
   $('#selLevel').onchange = e => { if (cls()) { cls().level = e.target.value; renderAll(); } };
   $('#selDir').onchange = e => { state.dir = e.target.value; save(); };
   $('#selRound').onchange = e => { state.rounding = +e.target.value; renderAll(); };
@@ -639,12 +643,33 @@ MARTIN	Hugo	4A	G"></textarea>
   $('#btnImportCancel').onclick = () => dlg.close();
   $('#importText').addEventListener('input', preview);
   $('#importDefClass').addEventListener('input', preview);
+  // Import de fichiers : Excel (.xlsx/.xls/.ods) ou texte (.csv/.txt), plusieurs fichiers possibles
+  const looksBinary = t => /\u0000/.test(t) || (t.match(/�/g) || []).length > 5;
+  const fileStem = name => name.replace(/\.[^.]+$/, '').replace(/^[0-9a-f]{8}-/i, '').trim();
   $('#importFile').onchange = async e => {
-    const f = e.target.files[0]; if (!f) return;
-    const buf = await f.arrayBuffer();
-    let txt = new TextDecoder('utf-8').decode(buf);
-    if (txt.includes('\ufffd')) txt = new TextDecoder('windows-1252').decode(buf);   // CSV Excel « ANSI »
-    $('#importText').value = txt; preview(); e.target.value = '';
+    const files = [...e.target.files]; if (!files.length) return;
+    const all = [], errors = [];
+    for (const f of files) {
+      const buf = await f.arrayBuffer();
+      let text;
+      if (/\.(xlsx|xls|ods)$/i.test(f.name)) {
+        if (!window.XLSX) { errors.push(f.name + " : lecture Excel impossible hors connexion. Ouvrez-le dans Excel et copiez-collez les colonnes."); continue; }
+        const wb = XLSX.read(buf, {type: 'array'});
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header: 1, raw: false, blankrows: false, defval: ''});
+        text = rows.map(r => r.map(c => String(c).replace(/[\t\r\n]+/g, ' ')).join('\t')).join('\n');
+      } else {
+        text = new TextDecoder('utf-8').decode(buf);
+        if (text.includes('�')) text = new TextDecoder('windows-1252').decode(buf);   // CSV Excel « ANSI »
+        if (looksBinary(text)) { errors.push(f.name + ' : format non reconnu.'); continue; }
+      }
+      const list = parseImport(text, $('#importDefClass').value.trim() || fileStem(f.name));
+      if (!list.length) errors.push(f.name + ' : aucun élève reconnu.');
+      all.push(...list);
+    }
+    $('#importText').value = all.length ? 'NOM\tPRENOM\tCLASSE\tSEXE\n' + all.map(s => [s.nom, s.prenom, s.classe, s.sexe].join('\t')).join('\n') : '';
+    preview();
+    if (errors.length) alert(errors.join('\n'));
+    e.target.value = '';
   };
   $('#btnDemo').onclick = () => {
     const noms = [['BERNARD','Emma','F'],['DUBOIS','Lucas','G'],['DURAND','Chloé','F'],['FONTAINE','Nathan','G'],['GARNIER','Inès','F'],['LAMBERT','Hugo','G'],['LEROY','Manon','F'],['MOREAU','Louis','G'],['PETIT','Jade','F'],['ROUSSEAU','Adam','G']];
@@ -652,12 +677,19 @@ MARTIN	Hugo	4A	G"></textarea>
     preview();
   };
   $('#btnImportOk').onclick = () => {
+    if (looksBinary($('#importText').value)) return alert("Ce contenu n'est pas lisible. Utilisez « Choisir un fichier » pour un fichier Excel, ou copiez-collez les colonnes.");
     const list = parseImport($('#importText').value, $('#importDefClass').value.trim());
     if (!list.length) return alert('Aucun élève reconnu. Vérifiez le format : NOM / PRÉNOM / CLASSE / SEXE.');
     const n = addStudents(list);
     dlg.close(); renderAll(); toast(`${n} élève(s) importé(s)`);
     setTimeout(() => focusCell(0, 0), 50);
   };
+
+  // Nettoyage : supprime les classes au nom illisible (fichier Excel importé comme du texte)
+  for (const name of Object.keys(state.classes)) {
+    if (name.length > 30 || /[\u0000-\u001f\u007f-\u009f\ufffd¦¿¤¶§«»^`~|{}<>\[\]*\\]/.test(name)) delete state.classes[name];
+  }
+  if (!state.classes[state.current]) state.current = null;
 
   // Ajout des classes intégrées au premier lancement (sans écraser les notes déjà saisies)
   if (state.seedVersion !== SEED_VERSION) {
