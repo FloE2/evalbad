@@ -264,6 +264,10 @@ MARTIN	Hugo	4A	G"></textarea>
   const uid = () => Math.random().toString(36).slice(2, 10);
   function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('on'), 1800); }
 
+  // Texte illisible (fichier binaire lu comme du texte)
+  const GARBAGE = /[\u0000-\u001f\u007f-\u009f\ufffd¦¿¤¶§«»^`~|{}<>\[\]*\\™€‰†‡]/;
+  const isGarbage = (txt, max) => !String(txt || '').trim() || String(txt).length > max || GARBAGE.test(txt);
+
   const cls = () => state.classes[state.current];
   const crits = () => CRITS[cls()?.level || '4'];
 
@@ -330,6 +334,7 @@ MARTIN	Hugo	4A	G"></textarea>
         nom = up.join(' '); prenom = parts.filter(p => !up.includes(p)).join(' ');
       }
       if (!nom && !prenom) continue;
+      if (isGarbage(nom + ' ' + prenom, 70)) continue;               // ligne illisible : ignorée
       const classe = (idx.classe >= 0 && r[idx.classe]) ? r[idx.classe].trim() : (defClass || 'Sans classe');
       res.push({ nom: (nom||'').toUpperCase(), prenom: prenom || '', classe, sexe: normSexe(idx.sexe >= 0 ? r[idx.sexe] : '') });
     }
@@ -685,9 +690,10 @@ MARTIN	Hugo	4A	G"></textarea>
     setTimeout(() => focusCell(0, 0), 50);
   };
 
-  // Nettoyage : supprime les classes au nom illisible (fichier Excel importé comme du texte)
-  for (const name of Object.keys(state.classes)) {
-    if (name.length > 30 || /[\u0000-\u001f\u007f-\u009f\ufffd¦¿¤¶§«»^`~|{}<>\[\]*\\]/.test(name)) delete state.classes[name];
+  // Nettoyage : supprime les élèves au nom illisible, puis les classes illisibles ou vides
+  for (const [name, c] of Object.entries(state.classes)) {
+    c.students = (c.students || []).filter(st => !isGarbage(st.nom + ' ' + st.prenom, 70));
+    if (isGarbage(name, 30) || !c.students.length) delete state.classes[name];
   }
   if (!state.classes[state.current]) state.current = null;
 
