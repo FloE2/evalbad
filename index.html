@@ -63,6 +63,9 @@
   dialog textarea{width:100%;height:220px;font:13px/1.4 ui-monospace,Consolas,monospace;border:1px solid var(--line-strong);border-radius:6px;padding:8px}
   .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0}
   .right{margin-left:auto}
+  .savestatus{font-size:12.5px;padding:3px 8px;border-radius:5px}
+  .savestatus.ok{color:#2f6b25;background:#e3f1de}
+  .savestatus.warn{color:#8a4b00;background:#fbe8c8;font-weight:600}
   #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d1d1b;color:#fff;padding:8px 16px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none}
   #toast.on{opacity:1}
   @media (max-width:1000px){main{grid-template-columns:1fr}}
@@ -104,6 +107,10 @@
     <button id="btnAddStudent">+ Élève</button>
   </div>
   <div class="group right">
+    <span id="saveStatus" class="savestatus"></span>
+    <button class="primary" id="btnSavePC" title="Enregistre toutes les classes et les notes dans un fichier sur votre ordinateur (Ctrl+S)">💾 Enregistrer sur mon PC</button>
+    <button id="btnOpenPC" title="Recharge un fichier de sauvegarde enregistré sur votre ordinateur">📂 Ouvrir</button>
+    <div class="sep"></div>
     <button id="btnCSV">Exporter (Excel)</button>
     <button id="btnPrint">Imprimer</button>
   </div>
@@ -155,12 +162,8 @@
 
     <div class="card" style="margin-top:14px">
       <h2>Sauvegarde</h2>
-      <div class="hint" style="margin-bottom:8px">Les notes sont enregistrées automatiquement dans ce navigateur. Faites une copie de sécurité de temps en temps.</div>
-      <div class="row">
-        <button id="btnSave" class="small">Télécharger une sauvegarde</button>
-        <button id="btnLoad" class="small">Restaurer…</button>
-        <input type="file" id="fileLoad" accept=".json" hidden>
-      </div>
+      <div class="hint" style="margin-bottom:8px">Les notes restent dans ce navigateur, mais elles disparaissent si le cache est vidé. Cliquez sur <b>💾 Enregistrer sur mon PC</b> (ou <kbd>Ctrl</kbd>+<kbd>S</kbd>) à la fin de chaque séance. Pour tout récupérer, utilisez <b>📂 Ouvrir</b> et choisissez ce fichier.</div>
+      <input type="file" id="fileLoad" accept=".json" hidden>
       <div class="row">
         <button id="btnCSVAll" class="small">Exporter toutes les classes</button>
         <button id="btnDelClass" class="small danger">Supprimer cette classe</button>
@@ -227,8 +230,28 @@ MARTIN	Hugo	4A	G"></textarea>
   };
   for (const l of ['4','3']) state.weights[l] = Object.assign(defaultWeights(l), state.weights[l] || {});
 
+  // ---------- Classes de l'année intégrées au fichier (ajoutées une seule fois) ----------
+  const SEED_VERSION = '2026-2027-v1';
+  const SEED = /*SEED*/[["ALLEAUME-NDJOCK", "Maïlys", "4A", "F"], ["BATTESTINI-AVARGUES", "Arsène", "4A", "G"], ["BENAÏSSA", "Kaïss", "4A", "G"], ["BINET", "Guillaume", "4A", "G"], ["BRIMONT", "Ferdinand", "4A", "G"], ["CARENINI", "Maël", "4A", "G"], ["CHENU", "Hermine", "4A", "F"], ["CHOUK", "Rayan", "4A", "G"], ["DAVIET - GOMES", "Haley", "4A", "F"], ["DEBANO", "Alexandre", "4A", "G"], ["DEPOUX", "Anaïs", "4A", "F"], ["DESPRAT DI BENEDETTO", "Anna", "4A", "F"], ["DOMENEC", "Chloé", "4A", "F"], ["DUVEAU", "Constance", "4A", "F"], ["EL AWAR", "Lara", "4A", "F"], ["ELALAM", "Haroun", "4A", "G"], ["FAIVRE", "Baptiste", "4A", "G"], ["GANDIL", "Manon", "4A", "F"], ["LEMAITRE", "Romane", "4A", "F"], ["LENNUYEUX", "Rachel", "4A", "F"], ["MCHANGAMA", "An-Icha", "4A", "F"], ["NASSEREDDINE", "Léa", "4A", "F"], ["PANTIS", "Darius", "4A", "G"], ["REBELO - ESPANHOL", "Bianca", "4A", "F"], ["THERINCA", "Lya", "4A", "F"], ["VIEILLEFOND", "Blanche", "4A", "F"], ["ACHITE-HENNI", "Adèle", "3B", "F"], ["ALVES", "Hugo", "3B", "G"], ["BEYOMA MAKITAKANA", "Eunice-Lydie", "3B", "F"], ["BICGEL", "Léo", "3B", "G"], ["BREMOND", "Alexis", "3B", "G"], ["CIAMPI", "Clémence", "3B", "F"], ["CONSTANTIN", "Romeo", "3B", "G"], ["CORNESCHI", "David", "3B", "G"], ["DAVID", "Alexis", "3B", "G"], ["FOILLARD", "Joséphine", "3B", "F"], ["GLIMOIS", "Mathilde", "3B", "F"], ["JOUANNET DE LASSEE", "Charlotte", "3B", "F"], ["KABAMBA", "Christivie", "3B", "F"], ["LOSQ FEAU", "Axel", "3B", "G"], ["MAILLARD", "Pierre", "3B", "G"], ["MOHAMED", "Dawoud", "3B", "G"], ["PATIN", "Jade", "3B", "F"], ["RADUC", "Segolene", "3B", "F"], ["RAWNAD", "Tahia", "3B", "F"], ["ROBART", "Emma", "3B", "F"], ["ROGER", "Dimitri", "3B", "G"], ["SIMIER", "Heloise", "3B", "F"], ["SOUCHON", "Capucine", "3B", "F"], ["TROISE", "Michelle", "3B", "F"], ["VIGIER", "Laylanee", "3B", "F"], ["ZEBOUDJ", "Nadia", "3B", "F"], ["ATSOULI", "Nadir", "5A", "G"], ["BERTHY", "Mathis", "5A", "G"], ["CAPARROS", "Jules", "5A", "G"], ["CORNESCHI", "Marius", "5A", "G"], ["DE ALMEIDA", "Oscar", "5A", "G"], ["DEMAISON-MÉGARBANÉ", "Valentin", "5A", "G"], ["DENDOUNE-ROUSSET", "Oscar", "5A", "G"], ["GERNIGON", "Mathis", "5A", "G"], ["HADIDJA", "Ahmed", "5A", "G"], ["JAUBERT SOREIL", "Charlotte", "5A", "F"], ["JOYEUX", "Eva", "5A", "F"], ["LEMAIGRE", "Axel", "5A", "G"], ["MACHEBOEUF", "Océane", "5A", "F"], ["MESSIER LEY", "Lilian", "5A", "G"], ["MORCEL", "Anya", "5A", "F"], ["NOUMBI NDONGO", "Maëlys", "5A", "F"], ["POQUET", "Romann", "5A", "G"], ["RICHER", "Avril", "5A", "F"], ["RODRIGUEZ", "Alexandre", "5A", "G"], ["SEMINOR", "Noa", "5A", "F"], ["SILVA VARZIELA", "Leonor", "5A", "F"], ["SOURDEIX MENAGER", "Jordan", "5A", "G"], ["SOUSA CORREIA", "Alicia", "5A", "F"], ["STASYUK", "Mark", "5A", "G"], ["VIALETAY MARCOVICI", "Athenais", "5A", "F"], ["WATHLE", "Eliott", "5A", "G"], ["ABALDONATO", "Marius", "5C", "G"], ["BERROUANE HAVEZ", "Dario", "5C", "G"], ["BOSSU", "Valentin", "5C", "G"], ["CASANOVA", "Melody", "5C", "F"], ["CHILA", "Giacomo", "5C", "G"], ["COGNET", "Flore", "5C", "F"], ["COLLIARD", "Clémence", "5C", "F"], ["D'ARBIGNY", "Camille", "5C", "G"], ["DEKKICHE", "Massin", "5C", "G"], ["DIABATE", "Balla", "5C", "G"], ["DIAKITE", "Fansé", "5C", "G"], ["EL OSTA", "Khodr", "5C", "G"], ["ESSADQ", "Chaima", "5C", "F"], ["EYMAR", "Livia", "5C", "F"], ["FAYE", "Morgan", "5C", "G"], ["FRITZ", "Elise", "5C", "F"], ["HAMON", "Maelys", "5C", "F"], ["LAUGLÉ", "Charlise", "5C", "F"], ["PATRY", "Elise", "5C", "F"], ["PRIESTER", "Abel", "5C", "G"], ["RASSAA", "Selima", "5C", "F"], ["REHAN", "Arosh", "5C", "G"], ["ROUGIER", "Louis", "5C", "G"], ["SACKO", "Coumba", "5C", "F"], ["SIBERT", "Raphael", "5C", "G"], ["AGRIMANO", "Vera Franceska", "6B", "F"], ["AKHENKHAM", "Amel", "6B", "F"], ["BARDOU", "Juliette", "6B", "F"], ["BRUNEAU DE LA SALLE", "Gabin", "6B", "G"], ["CHAVANNE", "Leon", "6B", "G"], ["CHEVALIER", "Alexandre", "6B", "G"], ["COUSIN", "Marie-Astrid", "6B", "F"], ["CYRKLEWSKI", "Camilo", "6B", "G"], ["DAVY GOURVIL", "Tom", "6B", "G"], ["DUPA", "Gabrielle", "6B", "F"], ["EDORH", "Marcus", "6B", "G"], ["FINANCE", "Margot", "6B", "F"], ["FORTIER-BEAULIEU", "Emilie", "6B", "F"], ["HAMOUCH", "Ilham", "6B", "F"], ["JOUANNET DE LASSEE", "Jeanne", "6B", "F"], ["KONE", "David", "6B", "G"], ["LAXALT", "Armel", "6B", "G"], ["LECHEVALLIER", "Emma", "6B", "F"], ["LEMAITRE", "Manon", "6B", "F"], ["LIMOGES SALOMON", "Alessandra", "6B", "F"], ["LOPES BETTENCOURT", "Nicolas", "6B", "G"], ["MAGINA", "Jules", "6B", "G"], ["MIGNY", "Clémence", "6B", "F"], ["PAOLI", "Thibaud", "6B", "G"], ["PARAIN", "Victor", "6B", "G"], ["PRUVOT ITOUMBA", "Zoé", "6B", "F"], ["RAY", "Rajshree", "6B", "F"], ["SANGLIER", "Paul", "6B", "G"], ["TOMBECK", "Mathis", "6B", "G"], ["VIDAIRA", "Timothy", "6B", "G"]]/*END*/;
+
   function load(){ try { return JSON.parse(localStorage.getItem(KEY)); } catch(e){ return null; } }
-  function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){} }
+
+  // Indicateur « enregistré sur le PC »
+  const SNAP_KEY = KEY + '-snap';
+  const dataSnap = () => JSON.stringify({classes: state.classes, weights: state.weights});
+  let savedSnap = (() => { try { return localStorage.getItem(SNAP_KEY); } catch(e){ return null; } })();
+  const isUnsaved = () => Object.keys(state.classes).length > 0 && dataSnap() !== savedSnap;
+  function updateSaveStatus(){
+    const el = document.getElementById('saveStatus'); if (!el) return;
+    if (!Object.keys(state.classes).length) { el.textContent = ''; el.className = 'savestatus'; return; }
+    if (isUnsaved()) { el.textContent = '● Non enregistré sur le PC'; el.className = 'savestatus warn'; }
+    else {
+      const t = state.lastSaved ? new Date(state.lastSaved) : null;
+      el.textContent = '✔ Enregistré sur le PC' + (t ? ' le ' + t.toLocaleDateString('fr-FR') + ' à ' + t.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '');
+      el.className = 'savestatus ok';
+    }
+  }
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){} updateSaveStatus(); }
 
   const $ = s => document.querySelector(s);
   const esc = s => String(s ?? '').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
@@ -539,21 +562,68 @@ MARTIN	Hugo	4A	G"></textarea>
     const names = Object.keys(state.classes); if (!names.length) return;
     download('badminton_toutes_classes.csv', '\ufeff' + names.map(classCSV).join('\r\n\r\n'), 'text/csv;charset=utf-8');
   };
-  $('#btnSave').onclick = () => download(`sauvegarde_badminton_${new Date().toISOString().slice(0,10)}.json`, JSON.stringify(state, null, 1), 'application/json');
-  $('#btnLoad').onclick = () => $('#fileLoad').click();
+  // ---------- Enregistrer sur le PC / Ouvrir ----------
+  // Sous Chrome ou Edge, le même fichier est réécrit à chaque enregistrement (on le choisit une fois par session).
+  // Sous les autres navigateurs, un fichier est téléchargé dans le dossier Téléchargements.
+  let fileHandle = null;
+  const SAVE_TYPES = [{ description: 'Sauvegarde notation badminton', accept: {'application/json': ['.json']} }];
+  function markSaved(){
+    state.lastSaved = Date.now();
+    savedSnap = dataSnap();
+    try { localStorage.setItem(SNAP_KEY, savedSnap); } catch(e){}
+    save();
+  }
+  async function saveToPC(){
+    if (!Object.keys(state.classes).length) return toast('Rien à enregistrer');
+    const stamp = Date.now();
+    const content = JSON.stringify(Object.assign({}, state, {lastSaved: stamp}), null, 1);
+    if (window.showSaveFilePicker) {
+      try {
+        if (!fileHandle) fileHandle = await window.showSaveFilePicker({ suggestedName: 'notes_badminton.json', types: SAVE_TYPES });
+        const w = await fileHandle.createWritable();
+        await w.write(content); await w.close();
+        markSaved(); toast(`💾 Enregistré dans « ${fileHandle.name} »`);
+        return;
+      } catch(err) {
+        if (err && err.name === 'AbortError') return;      // l'utilisateur a annulé
+        fileHandle = null;                                   // sinon : on bascule sur le téléchargement
+      }
+    }
+    download(`notes_badminton_${new Date().toISOString().slice(0,10)}.json`, content, 'application/json');
+    markSaved(); toast('💾 Fichier téléchargé (dossier Téléchargements)');
+  }
+  function restore(data){
+    if (!data || !data.classes) throw new Error('invalide');
+    if (Object.keys(state.classes).length && !confirm('Remplacer les données actuelles par ce fichier ?')) return false;
+    state = Object.assign({dir:'right', rounding:0.5, weights:{}}, data, {seedVersion: SEED_VERSION});
+    for (const l of ['4','3']) state.weights[l] = Object.assign(defaultWeights(l), state.weights[l] || {});
+    savedSnap = dataSnap();
+    try { localStorage.setItem(SNAP_KEY, savedSnap); } catch(e){}
+    renderAll(); toast('📂 Sauvegarde rechargée');
+    return true;
+  }
+  async function openFromPC(){
+    if (window.showOpenFilePicker) {
+      try {
+        const [h] = await window.showOpenFilePicker({ types: SAVE_TYPES });
+        const data = JSON.parse(await (await h.getFile()).text());
+        if (restore(data)) fileHandle = h;                   // les prochains enregistrements réécrivent ce fichier
+      } catch(err) { if (!err || err.name !== 'AbortError') alert('Fichier de sauvegarde invalide.'); }
+      return;
+    }
+    $('#fileLoad').click();
+  }
+  $('#btnSavePC').onclick = saveToPC;
+  $('#btnOpenPC').onclick = openFromPC;
   $('#fileLoad').onchange = async e => {
     const f = e.target.files[0]; if (!f) return;
-    try {
-      const data = JSON.parse(await f.text());
-      if (!data.classes) throw 0;
-      if (confirm('Remplacer toutes les données actuelles par cette sauvegarde ?')) {
-        state = Object.assign({dir:'right', rounding:0.5, weights:{}}, data);
-        for (const l of ['4','3']) state.weights[l] = Object.assign(defaultWeights(l), state.weights[l] || {});
-        renderAll(); toast('Sauvegarde restaurée');
-      }
-    } catch(err) { alert('Fichier de sauvegarde invalide.'); }
+    try { restore(JSON.parse(await f.text())); } catch(err) { alert('Fichier de sauvegarde invalide.'); }
     e.target.value = '';
   };
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveToPC(); }
+  });
+  window.addEventListener('beforeunload', e => { if (isUnsaved()) { e.preventDefault(); e.returnValue = ''; } });
 
   // ---------- Fenêtre d'import ----------
   const dlg = $('#dlgImport');
@@ -588,6 +658,14 @@ MARTIN	Hugo	4A	G"></textarea>
     dlg.close(); renderAll(); toast(`${n} élève(s) importé(s)`);
     setTimeout(() => focusCell(0, 0), 50);
   };
+
+  // Ajout des classes intégrées au premier lancement (sans écraser les notes déjà saisies)
+  if (state.seedVersion !== SEED_VERSION) {
+    addStudents(SEED.map(([nom, prenom, classe, sexe]) => ({nom, prenom, classe, sexe})));
+    state.seedVersion = SEED_VERSION;
+    const names = Object.keys(state.classes).sort((a,b)=>a.localeCompare(b,'fr',{numeric:true}));
+    state.current = names[0] || null;
+  }
 
   renderAll();
 })();
